@@ -101,9 +101,7 @@ class Run:
 
         self.arm.open_gripper()
 
-        self.time.sleep(4)
-
-        #self.arm.close_gripper()
+        self.time.sleep(15)
 
         # request sensors
         self.create.start_stream([
@@ -113,7 +111,7 @@ class Run:
         self.visualize()
         self.virtual_create.enable_buttons()
         self.visualize()
-		
+
         self.arm.go_to(4, math.radians(-90))
         self.time.sleep(4)
 
@@ -133,11 +131,11 @@ class Run:
                 print(distance)
                 self.pf.measure(distance, 0)
                 self.visualize()
-				
+
             #posC = self.create.sim_get_position()
-				
+
             #print(posC)
-			
+
             self.arm.go_to(4, math.radians(-90))
             self.arm.go_to(5, math.radians(90))
             self.time.sleep(100)
