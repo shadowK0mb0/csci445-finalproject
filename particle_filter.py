@@ -47,9 +47,9 @@ class ParticleFilter:
         for particle in self._particles:
             # compute what the distance should be, if particle position is accurate
             distance = self._map.closest_distance([particle.x, particle.y], particle.theta + servo_angle_in_rad)
-            print(particle.theta + servo_angle_in_rad)
-            print([particle.x, particle.y])
-            print(distance)
+            # print(particle.theta + servo_angle_in_rad)
+            # print([particle.x, particle.y])
+            # print(distance)
             # compute the probability P[measured z | robot @ x]
             p = scipy.stats.norm(distance, self._measurement_variance).pdf(z)
             if p == 0:

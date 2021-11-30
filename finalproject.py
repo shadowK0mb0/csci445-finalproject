@@ -168,6 +168,9 @@ class Run:
         self.odometry.y = start_y
         left_speed = 0
         right_speed = 0
+        prev_x = start_x
+        prev_y = start_y
+        prev_theta = self.odometry.theta
         for i in range(len(path)):
             goal_x, goal_y = convert_pixel_to_point(path[i].state)  # returns x,y
             print("wait point: ", goal_x,goal_y)
@@ -179,7 +182,7 @@ class Run:
                     self.odometry.update(state.leftEncoderCounts, state.rightEncoderCounts)
                     goal_theta = math.atan2(goal_y - self.odometry.y, goal_x - self.odometry.x)
                     theta = math.atan2(math.sin(self.odometry.theta), math.cos(self.odometry.theta))
-                    print("[{},{},{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
+                    # print("[{},{},{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
 
                     distance = math.sqrt(math.pow(goal_x - self.odometry.x, 2) + math.pow(goal_y - self.odometry.y, 2))
                     if distance < 0.15:
@@ -201,7 +204,12 @@ class Run:
                     self.create.drive_direct(right_speed*j/5, left_speed*j/5)
                     self.time.sleep(0.01)
                 self.create.drive_direct(0,0)
-                self.time.sleep(0.1)
+                self.time.sleep(0.5)
+                self.pf.move_by(self.odometry.x - prev_x, self.odometry.y - prev_y, self.odometry.theta - prev_theta)
+                prev_x = self.odometry.x
+                prev_y = self.odometry.y
+                prev_theta = self.odometry.theta
+                print("[x:{},y:{},theta:{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
                 self.visualize()
                 print("Updating particle filter!")
                 distance = self.sonar.get_distance()
@@ -209,10 +217,11 @@ class Run:
                 self.pf.measure(distance, 0)
                 self.visualize()
                 self.time.sleep(0.1)
-            print("new waypoint!")
+            # print("new waypoint!")
 
 
         print("Should be at goal")
+        self.create.drive_direct(0, 0)
         self.time.sleep(4)
 
         self.virtual_create.enable_buttons()
