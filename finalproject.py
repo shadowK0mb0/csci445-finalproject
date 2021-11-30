@@ -9,7 +9,20 @@ import particle_filter
 import rrt
 import numpy as np
 
+def convert_point_to_pixels(point):
+    x = point[0]
+    y = 3.0 - point[1]
+    x *= 100
+    y *= 100
+    return (int(x),int(y))
 
+def convert_pixel_to_point(pixels):
+    x = pixels[0]
+    y = pixels[1]
+    x /= 100
+    y /= 100
+    y = 3.0 - y
+    return (x,y)
 
 class Run:
     def __init__(self, factory):
@@ -30,9 +43,10 @@ class Run:
         self.rrt = rrt.RRT(self.map)
 
         # TODO identify good PID controller gains
-        self.pidTheta = pid_controller.PIDController(200, 0, 100, [-10, 10], [-50, 50], is_angle=True)
+        self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 1000, 0.06, 0.15, 0.2)
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 100, 0.06, 0.15, 0.2)
+        self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
 
@@ -55,13 +69,24 @@ class Run:
         old_x = self.odometry.x
         old_y = self.odometry.y
         old_theta = self.odometry.theta
-        while math.fabs(math.atan2(
-            math.sin(goal_theta - self.odometry.theta),
-            math.cos(goal_theta - self.odometry.theta))) > 0.05:
-            output_theta = self.pidTheta.update(self.odometry.theta, goal_theta, self.time.time())
+        start_time = self.time.time()
+        prev_theta = old_theta
+        goal_theta = math.atan2(math.sin(goal_theta), math.cos(goal_theta))      
+        while True:
+            theta = math.atan2(math.sin(self.odometry.theta), math.cos(self.odometry.theta))      
+            output_theta = self.pidTheta.update(theta, goal_theta, self.time.time())
             self.create.drive_direct(int(+output_theta), int(-output_theta))
+            angle_error = math.atan2(math.sin(goal_theta - theta), math.cos(goal_theta - theta))
+            print(output_theta, theta, goal_theta, angle_error)
+            
+            if self.time.time() - start_time > 0.3 and abs(angle_error) < 0.005 and abs(theta - prev_theta) < 0.005:
+                break
+            if abs(goal_theta) > abs(theta) and angle_error < 0:
+                break
+            prev_theta = theta
             self.sleep(0.01)
         self.create.drive_direct(0, 0)
+        self.sleep(2)
         self.pf.move_by(self.odometry.x - old_x, self.odometry.y - old_y, self.odometry.theta - old_theta)
 
     def forward(self):
@@ -99,18 +124,98 @@ class Run:
 
         self.create.drive_direct(0, 0)
 
-        self.arm.open_gripper()
+        # self.arm.open_gripper()
 
+        self.servo.go_to(0)
         self.time.sleep(4)
+        start_x = 1.0049
+        start_y = 0.495
+        starting_position = convert_point_to_pixels((start_x, start_y))
+        goal_position = convert_point_to_pixels((1.5, 2.5))
+        K = 5000
+        delta = 10
+        self.rrt.build(starting_position, K, delta)
+        path = self.rrt.shortest_path(goal=self.rrt.nearest_neighbor(goal_position))
+        for i in range(1,len(path)):
+            self.map.draw_line(pos1=path[i-1].state, pos2=path[i].state, color=(255,0,0))
+        # self.map.save("hello.png")
+        print("map generated")
 
         #self.arm.close_gripper()
 
+        print("setting up sensor reading and particle filter")
         # request sensors
         self.create.start_stream([
             pyCreate2.Sensor.LeftEncoderCounts,
             pyCreate2.Sensor.RightEncoderCounts,
         ])
         self.visualize()
+        distance = self.sonar.get_distance()
+        self.pf.measure(distance, 0)
+        self.visualize()
+        fifth_size = int(len(path)/5)
+
+        print("Initial localizing routine!")
+        for i in range(4):
+            self.go_to_angle(self.odometry.theta + math.pi / 2)
+            self.visualize()
+            distance = self.sonar.get_distance()
+            print("measured distance is: ", distance)
+            self.pf.measure(distance, 0)
+            self.visualize()
+
+        print("----Starting path following----")
+        self.odometry.x = start_x
+        self.odometry.y = start_y
+        left_speed = 0
+        right_speed = 0
+        for i in range(len(path)):
+            goal_x, goal_y = convert_pixel_to_point(path[i].state)  # returns x,y
+            print("wait point: ", goal_x,goal_y)
+            while True:
+                state = self.create.update()
+                curr_time = self.time.time()
+                if state is not None:
+                    # update stuff
+                    self.odometry.update(state.leftEncoderCounts, state.rightEncoderCounts)
+                    goal_theta = math.atan2(goal_y - self.odometry.y, goal_x - self.odometry.x)
+                    theta = math.atan2(math.sin(self.odometry.theta), math.cos(self.odometry.theta))
+                    print("[{},{},{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
+
+                    distance = math.sqrt(math.pow(goal_x - self.odometry.x, 2) + math.pow(goal_y - self.odometry.y, 2))
+                    if distance < 0.15:
+                        break             
+                    output_theta = self.pidTheta.update(theta, goal_theta, curr_time)
+
+                    # base version:
+                    left_speed = int(self.base_speed-output_theta)
+                    right_speed = int(self.base_speed+output_theta)
+                    self.create.drive_direct(right_speed, left_speed)
+
+                    # improved version 2: fuse with velocity controller
+                    # output_distance = self.pidDistance.update(0, distance, curr_time)
+                    # self.create.drive_direct(int(output_theta + output_distance), int(-output_theta + output_distance))
+                            
+                    
+            if i % fifth_size == 0:
+                for j in range(4,0,-1):
+                    self.create.drive_direct(right_speed*j/5, left_speed*j/5)
+                    self.time.sleep(0.01)
+                self.create.drive_direct(0,0)
+                self.time.sleep(0.1)
+                self.visualize()
+                print("Updating particle filter!")
+                distance = self.sonar.get_distance()
+                print("measured distance is: ", distance)
+                self.pf.measure(distance, 0)
+                self.visualize()
+                self.time.sleep(0.1)
+            print("new waypoint!")
+
+
+        print("Should be at goal")
+        self.time.sleep(4)
+
         self.virtual_create.enable_buttons()
         self.visualize()
 		
@@ -138,9 +243,9 @@ class Run:
 				
             #print(posC)
 			
-            self.arm.go_to(4, math.radians(-90))
-            self.arm.go_to(5, math.radians(90))
-            self.time.sleep(100)
+            # self.arm.go_to(4, math.radians(-90))
+            # self.arm.go_to(5, math.radians(90))
+            # self.time.sleep(100)
 
 
             self.time.sleep(0.01)

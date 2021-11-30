@@ -17,7 +17,7 @@ class PIDController:
         self.integral = 0.0
         self.previousTime = None
         self.isAngle = is_angle
-        self.prev_output = None
+        self.prev_output = 0
         self.step_size = step_size
 
     def update(self, value, target_value, time):
@@ -42,6 +42,6 @@ class PIDController:
             if output < self.prev_output - self.step_size:
                 output = self.prev_output - self.step_size
             elif output > self.prev_output + self.step_size:
-                output = self.prev_output - self.step_size
+                output = self.prev_output + self.step_size
         self.prev_output = output
         return clamp(output, self.range_output)

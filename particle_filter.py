@@ -3,6 +3,7 @@ import math
 import scipy.stats
 from numpy.random import choice
 import copy
+from scipy.special import logsumexp
 
 
 class Particle:
@@ -61,7 +62,7 @@ class ParticleFilter:
             particle.ln_p = p_measured_z_if_robot_at_x + particle.ln_p
         # normalize probabilities (take P[measured z into account])
         probabilities = np.array([particle.ln_p for particle in self._particles])
-        a = scipy.misc.logsumexp(probabilities)
+        a = logsumexp(probabilities)
         probabilities -= a
         for j in range(0, len(probabilities)):
             self._particles[j].ln_p = probabilities[j]
