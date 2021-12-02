@@ -45,7 +45,7 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 500, 0.06, 0.15, 0.2)
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 1, 0.06, 0.15, 0.2)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
@@ -123,12 +123,16 @@ class Run:
     def run(self):
         self.create.start()
         self.create.safe()
+        self.arm.open_gripper()
 
         self.create.drive_direct(0, 0)
 
         # self.arm.open_gripper()
-        self.servo.go_to(0)
-        self.time.sleep(4)
+      
+
+
+
+
         start_x = 1.0049
 
         #self.arm.go_to(1,np.pi/4)
@@ -158,7 +162,7 @@ class Run:
         self.pf.measure(distance, 0)
         self.visualize()
         fifth_size = int(len(path)/5)
-
+        """
         print("Initial localizing routine!")
         for i in range(4):
             self.go_to_angle(self.odometry.theta + math.pi / 2)
@@ -167,7 +171,7 @@ class Run:
             print("measured distance is: ", distance)
             self.pf.measure(distance, 0)
             self.visualize()
-
+        """
         print("----Starting path following----")
         self.odometry.x = start_x
         self.odometry.y = start_y
@@ -231,8 +235,8 @@ class Run:
 
         self.virtual_create.enable_buttons()
         self.visualize()
-        self.inverse_kinematics(-.6,.4)
-        self.arm.close_gripper()
+        self.get_cup()
+
         #self.arm.go_to(4, math.radians(-90))
         self.time.sleep(4)
 
@@ -297,7 +301,18 @@ class Run:
 
         self.arm.go_to(1, theta1)
         self.arm.go_to(3, theta2)
+        self.arm.go_to(5, -(theta2-(math.radians(90)-theta1)))
         print("Go to [{},{}], IK: [{} deg, {} deg]".format(x_i, z_i, math.degrees(theta1), math.degrees(theta2)))
 
     def get_cup(self):
-        
+        angle = math.tan((self.odometry.x-1.6)/(self.odometry.y-3.4))
+        self.arm.go_to(0,-1*angle)
+        h = math.sqrt((self.odometry.x-1.6)**2+(self.odometry.y-3.4)**2)
+        print(h)
+        self.inverse_kinematics(-h+.3,.15)
+        self.time.sleep(2)
+        self.arm.close_gripper()
+        self.time.sleep(2)
+        self.arm.go_to(1,0)
+        self.arm.go_to(3,0)
+        self.sleep(2)
