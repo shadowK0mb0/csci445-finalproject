@@ -45,10 +45,12 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 100, 0.06, 0.15, 0.2)
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 500, 0.06, 0.15, 0.2)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
+
+
 
     def sleep(self, time_in_sec):
         """Sleeps for the specified amount of time while keeping odometry up-to-date
@@ -128,6 +130,9 @@ class Run:
         self.servo.go_to(0)
         self.time.sleep(4)
         start_x = 1.0049
+
+        #self.arm.go_to(1,np.pi/4)
+
         start_y = 0.495
         starting_position = convert_point_to_pixels((start_x, start_y))
         goal_position = convert_point_to_pixels((1.5, 2.5))
@@ -226,8 +231,9 @@ class Run:
 
         self.virtual_create.enable_buttons()
         self.visualize()
-
-        self.arm.go_to(4, math.radians(-90))
+        self.inverse_kinematics(-.6,.4)
+        self.arm.close_gripper()
+        #self.arm.go_to(4, math.radians(-90))
         self.time.sleep(4)
 
         while True:
@@ -251,8 +257,8 @@ class Run:
 
             #print(posC)
 
-            self.arm.go_to(4, math.radians(-90))
-            self.arm.go_to(5, math.radians(90))
+            #self.arm.go_to(4, math.radians(-90))
+            #self.arm.go_to(5, math.radians(90))
             self.time.sleep(100)
 
 
@@ -269,6 +275,7 @@ class Run:
 
 
     def inverse_kinematics(self, x_i, z_i):
+
         L1 = 0.4 # estimated using V-REP (joint2 - joint4)
         L2 = 0.39 # estimated using V-REP (joint4 - joint6)
         # Corrections for our coordinate system
@@ -291,3 +298,6 @@ class Run:
         self.arm.go_to(1, theta1)
         self.arm.go_to(3, theta2)
         print("Go to [{},{}], IK: [{} deg, {} deg]".format(x_i, z_i, math.degrees(theta1), math.degrees(theta2)))
+
+    def get_cup(self):
+        

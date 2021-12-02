@@ -19,15 +19,11 @@ class KukaLBR4PlusVrep:
                 vrep.simx_opmode_oneshot_wait)
             self._joints.append(joint)
 
-
     def close_gripper(self):
-        vrep.simxSetIntegerSignal(self._clientID, "P_Grip_straight_motor", 1,
-                                  vrep.simx_opmode_oneshot_wait)
-
+        vrep.simxSetIntegerSignal(self._clientID, 'P_Grip_straight_motor', 1, vrep.simx_opmode_oneshot_wait)
 
     def open_gripper(self):
-        vrep.simxSetIntegerSignal(self._clientID, "P_Grip_straight_motor", 0,
-                                  vrep.simx_opmode_oneshot_wait)
+        vrep.simxSetIntegerSignal(self._clientID, 'P_Grip_straight_motor', 0, vrep.simx_opmode_oneshot_wait)
 
     def go_to(self, joint, angle):
         """Go to specified target angle.
