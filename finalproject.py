@@ -45,7 +45,7 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 1, 0.06, 0.15, 0.2)
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 500, 0.06, 0.15, 0.2)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
@@ -139,7 +139,7 @@ class Run:
 
         start_y = 0.495
         starting_position = convert_point_to_pixels((start_x, start_y))
-        goal_position = convert_point_to_pixels((1.5, 2.5))
+        goal_position = convert_point_to_pixels((1.5, 2.75))
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
@@ -309,10 +309,10 @@ class Run:
         self.arm.go_to(0,-1*angle)
         h = math.sqrt((self.odometry.x-1.6)**2+(self.odometry.y-3.4)**2)
         print(h)
-        self.inverse_kinematics(-h+.3,.15)
-        self.time.sleep(2)
+        self.inverse_kinematics(-h+.28,.15)
+        self.time.sleep(6)
         self.arm.close_gripper()
-        self.time.sleep(2)
+        self.time.sleep(6)
         self.arm.go_to(1,0)
         self.arm.go_to(3,0)
-        self.sleep(2)
+        self.sleep(6)
