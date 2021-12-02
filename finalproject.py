@@ -45,7 +45,7 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 500, 0.06, 0.15, 0.2)
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 1000, 0.06, 0.15, 0.2)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
@@ -130,7 +130,7 @@ class Run:
         # self.arm.open_gripper()
       
 
-
+        # self.get_cup()
 
 
         start_x = 1.0049
@@ -139,7 +139,7 @@ class Run:
 
         start_y = 0.495
         starting_position = convert_point_to_pixels((start_x, start_y))
-        goal_position = convert_point_to_pixels((1.5, 2.75))
+        goal_position = convert_point_to_pixels((1.5, 2.85))
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
@@ -235,7 +235,10 @@ class Run:
 
         self.virtual_create.enable_buttons()
         self.visualize()
+        #self.go_to_angle(math.radians(90))
+        #self.sleep(5)
         self.get_cup()
+        self.place_cup(2)
 
         #self.arm.go_to(4, math.radians(-90))
         self.time.sleep(4)
@@ -292,10 +295,13 @@ class Run:
 
         beta = math.acos((r*r + L1*L1 - L2*L2) / (2*L1*r))
         theta1 = math.atan2(x, z) - beta
-        if theta2 < -math.pi / 2.0 or theta2 > math.pi / 2.0 or theta1 < -math.pi / 2.0 or theta1 > math.pi / 2.0:
+
+        print(theta1,theta2)
+        if theta2 < -9*math.pi/16 or theta2 > 9*math.pi/16 or theta1 < -9*math.pi/16 or theta1 > 9*math.pi/16:
             theta2 = math.pi + alpha
             theta1 = math.atan2(x, z) + beta
-        if theta2 < -math.pi / 2.0 or theta2 > math.pi / 2.0 or theta1 < -math.pi / 2.0 or theta1 > math.pi / 2.0:
+            print(theta1,theta2)
+        if theta2 < -9*math.pi/16 or theta2 > 9*math.pi/16 or theta1 < -9*math.pi/16 or theta1 > 9*math.pi/16:
             print("Not possible")
             return
 
@@ -305,14 +311,20 @@ class Run:
         print("Go to [{},{}], IK: [{} deg, {} deg]".format(x_i, z_i, math.degrees(theta1), math.degrees(theta2)))
 
     def get_cup(self):
-        angle = math.tan((self.odometry.x-1.6)/(self.odometry.y-3.4))
+        c_x = self.odometry.x - .13*math.cos(self.odometry.theta)
+        c_y = self.odometry.y - .13*math.sin(self.odometry.theta)
+        # c_x = 1.5
+        # c_x = 2.75
+        angle = math.tan((c_x-1.6)/(c_y-3.4))
         self.arm.go_to(0,-1*angle)
-        h = math.sqrt((self.odometry.x-1.6)**2+(self.odometry.y-3.4)**2)
+        h = math.sqrt((c_x-1.6)**2+(c_y-3.4)**2)
         print(h)
-        self.inverse_kinematics(-h+.28,.15)
+        self.inverse_kinematics(-h+.32,.21)
         self.time.sleep(6)
         self.arm.close_gripper()
         self.time.sleep(6)
-        self.arm.go_to(1,0)
-        self.arm.go_to(3,0)
-        self.sleep(6)
+
+    def place_cup(self, shelf):
+        shelf_height = [.21,.53,.85]
+        self.inverse_kinematics(-.5,shelf_height[shelf])
+        self.arm.go_to(0,3*-math.pi/4)
