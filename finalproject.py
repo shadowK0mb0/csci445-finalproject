@@ -132,7 +132,9 @@ class Run:
 
         # self.arm.open_gripper()
       
-
+        posC = self.create.sim_get_position()
+        print("inti pos")
+        print(posC)
         # self.get_cup()
 
 
@@ -142,7 +144,7 @@ class Run:
 
         start_y = self.s_y
         starting_position = convert_point_to_pixels((start_x, start_y))
-        goal_position = convert_point_to_pixels((1.5, 2.85))
+        goal_position = convert_point_to_pixels((1.5, 2.5))
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
@@ -172,7 +174,7 @@ class Run:
             self.pf.measure(distance, 0)
             self.visualize()
         """
-        fifth_size = int(len(path)/5)
+        fifth_size = int(len(path)/8)
         
         print("----Starting path following----")
         self.odometry.x = start_x
@@ -313,15 +315,22 @@ class Run:
         print("Go to [{},{}], IK: [{} deg, {} deg]".format(x_i, z_i, math.degrees(theta1), math.degrees(theta2)))
 
     def get_cup(self):
-        c_x = self.odometry.x - .13*math.cos(self.odometry.theta) - .04
-        c_y = self.odometry.y - .13*math.sin(self.odometry.theta) + .05
+        print("cup [x:{},y:{},theta:{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
+
+        c_x = self.odometry.x - .1372*math.cos(self.odometry.theta) #- .04
+        c_y = self.odometry.y - .1372*math.sin(self.odometry.theta) #+ .05
+
         # c_x = 1.5
         # c_x = 2.75
+
         angle = math.tan((c_x-1.6001)/(c_y-3.3999))
         self.arm.go_to(0,-1*angle)
         h = math.sqrt((c_x-1.6)**2+(c_y-3.4)**2)
         print(h)
-        self.inverse_kinematics(-h+.32,.17)
+        self.time.sleep(6)
+        self.inverse_kinematics(-h+.4,.2)
+        self.time.sleep(6)
+        #self.inverse_kinematics(-h+.32,.17)
         self.time.sleep(6)
         self.arm.close_gripper()
         self.time.sleep(6)
@@ -329,4 +338,9 @@ class Run:
     def place_cup(self, shelf):
         shelf_height = [.21,.53,.85]
         self.inverse_kinematics(-.5,shelf_height[shelf])
+        self.sleep(4)
+        self.arm.go_to(0,1*-math.pi/4)
+        self.time.sleep(1)
+        self.arm.go_to(0,2*-math.pi/4)
+        self.time.sleep(1)
         self.arm.go_to(0,3*-math.pi/4)

@@ -136,3 +136,12 @@ class Create2Vrep:
             -1,
             vrep.simx_opmode_oneshot)
         return (x,y)
+
+    def get_cup_pos(self):
+        rc, Cup = vrep.simxGetObjectHandle(self._clientID, "Cup",vrep.simx_opmode_oneshot_wait)
+        rc, (x,y,z) = vrep.simxGetObjectPosition(
+            self._clientID,
+            Cup,
+            -1,
+            vrep.simx_opmode_oneshot)
+        return (x,y)
