@@ -15,7 +15,7 @@ class Particle:
 
 
 class ParticleFilter:
-    def __init__(self, map, num_particles, translation_variance, rotation_variance, measurement_variance):
+    def __init__(self, map, num_particles, translation_variance, rotation_variance, measurement_variance,x,y):
         self._particles = []
         self._map = map
         self._translation_variance = translation_variance
@@ -25,12 +25,21 @@ class ParticleFilter:
         p = 1.0 / num_particles
         for i in range(0, num_particles):
             self._particles.append(Particle(
+                x,
+                y,
+                # choice([-math.pi, -math.pi/2, 0, math.pi/2]),
+                0,
+                # 0,
+                math.log(p)))
+            """
+            self._particles.append(Particle(
                 np.random.uniform(map.bottom_left[0], map.top_right[0]),
                 np.random.uniform(map.bottom_left[1], map.top_right[1]),
                 # choice([-math.pi, -math.pi/2, 0, math.pi/2]),
                 np.random.uniform(0, 2*math.pi),
                 # 0,
                 math.log(p)))
+            """
 
     def move_by(self, x, y, theta):
         for particle in self._particles:

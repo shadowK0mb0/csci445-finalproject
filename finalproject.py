@@ -45,7 +45,10 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 1000, 0.06, 0.15, 0.2)
+        self.s_x = 1.0049
+
+        self.s_y = 0.495
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 100, 0.06, 0.05, 0.05,self.s_x,self.s_y)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
@@ -133,11 +136,11 @@ class Run:
         # self.get_cup()
 
 
-        start_x = 1.0049
+        start_x = self.s_x
 
         #self.arm.go_to(1,np.pi/4)
 
-        start_y = 0.495
+        start_y = self.s_y
         starting_position = convert_point_to_pixels((start_x, start_y))
         goal_position = convert_point_to_pixels((1.5, 2.85))
         K = 5000
@@ -158,10 +161,7 @@ class Run:
             pyCreate2.Sensor.RightEncoderCounts,
         ])
         self.visualize()
-        distance = self.sonar.get_distance()
-        self.pf.measure(distance, 0)
-        self.visualize()
-        fifth_size = int(len(path)/5)
+
         """
         print("Initial localizing routine!")
         for i in range(4):
@@ -172,6 +172,8 @@ class Run:
             self.pf.measure(distance, 0)
             self.visualize()
         """
+        fifth_size = int(len(path)/5)
+        
         print("----Starting path following----")
         self.odometry.x = start_x
         self.odometry.y = start_y
@@ -311,15 +313,15 @@ class Run:
         print("Go to [{},{}], IK: [{} deg, {} deg]".format(x_i, z_i, math.degrees(theta1), math.degrees(theta2)))
 
     def get_cup(self):
-        c_x = self.odometry.x - .13*math.cos(self.odometry.theta)
-        c_y = self.odometry.y - .13*math.sin(self.odometry.theta)
+        c_x = self.odometry.x - .13*math.cos(self.odometry.theta) - .04
+        c_y = self.odometry.y - .13*math.sin(self.odometry.theta) + .05
         # c_x = 1.5
         # c_x = 2.75
-        angle = math.tan((c_x-1.6)/(c_y-3.4))
+        angle = math.tan((c_x-1.6001)/(c_y-3.3999))
         self.arm.go_to(0,-1*angle)
         h = math.sqrt((c_x-1.6)**2+(c_y-3.4)**2)
         print(h)
-        self.inverse_kinematics(-h+.32,.21)
+        self.inverse_kinematics(-h+.32,.17)
         self.time.sleep(6)
         self.arm.close_gripper()
         self.time.sleep(6)
