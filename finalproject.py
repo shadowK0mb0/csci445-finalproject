@@ -173,10 +173,14 @@ class Run:
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
+
+        # self.map.save("hello.png")
+        # self.map.save("hello1.png")
+
         path = self.rrt.shortest_path(goal=self.rrt.nearest_neighbor(goal_position))
         for i in range(1, len(path)):
             self.map.draw_line(pos1=path[i-1].state, pos2=path[i].state, color=(255, 0, 0))
-        # self.map.save("hello.png")
+            # self.map.save("hello.png")
         print("map generated")
 
         #self.arm.close_gripper()

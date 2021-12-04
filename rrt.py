@@ -53,6 +53,8 @@ class RRT:
             self.T.append(Vertex(x_new))
             x_near.neighbors.append(self.T[-1])
 
+            self.img.draw_line(tuple(x_new), tuple(x_near.state), (0, 255, 255))
+
     def shortest_path(self, goal):
         dist = dict()
         prev = dict()
