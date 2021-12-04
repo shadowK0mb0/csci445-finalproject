@@ -354,12 +354,12 @@ class Run:
         self.time.sleep(6)
         self.inverse_kinematics(-h + self.gripper_len, self.cup_height)
         self.time.sleep(6)
-        input("press enter to continue")
+        # input("press enter to continue")
         #self.inverse_kinematics(-h+.32,.17)
         self.time.sleep(6)
         self.arm.close_gripper()
         self.time.sleep(6)
-        input("press enter to continue")
+        # input("press enter to continue")
 
     def place_cup(self):
         height = self.shelf_heights[self.shelf_number]
