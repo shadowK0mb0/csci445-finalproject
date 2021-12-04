@@ -144,7 +144,7 @@ class Run:
 
         start_y = self.s_y
         starting_position = convert_point_to_pixels((start_x, start_y))
-        goal_position = convert_point_to_pixels((1.5, 2.5))
+        goal_position = convert_point_to_pixels((1.5, 2.85))
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
