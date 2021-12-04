@@ -45,14 +45,39 @@ class Run:
         # TODO identify good PID controller gains
         self.pidTheta = pid_controller.PIDController(90, 1, 60, [-3, 3], [-50, 50], step_size=10, is_angle=True)
         # TODO identify good particle filter parameters
-        self.s_x = 1.0049
 
-        self.s_y = 0.495
-        self.pf = particle_filter.ParticleFilter(self.mapJ, 100, 0.06, 0.05, 0.05,self.s_x,self.s_y)
         self.base_speed = 50
 
         self.joint_angles = np.zeros(7)
 
+        # *******************************************************************************
+        # SET THESE VARIABLES IF YOU CHANGE THE SIM
+        # these are the start coordinates for the robot
+        self.start_x = 1.0049
+        self.start_y = 0.495
+        # these are the coordinates for the arm
+        self.arm_x = 1.6001
+        self.arm_y = 3.3999
+        # these are the goal coordinates for the robot
+        self.goal_x = 1.5
+        self.goal_y = 2.5
+        # set the shelf number to 0, 1, 2 these are the shelfs
+        # in range of the arm
+        self.shelf_number = 1
+        # *******************************************************************************
+        # our assumptions about distances and positioning
+        self.cup_height = 0.2
+        self.gripper_len = 0.4
+        # distance from ground to first joint
+        self.arm_base_height = 0.3105
+        # estimated using V-REP (joint2 - joint4)
+        self.link1 = 0.4
+        # estimated using V-REP (joint4 - joint6)
+        self.link2 = 0.39
+        # eyeballed these numbers
+        self.shelf_heights = [0.21, 0.53, 0.85]
+
+        self.pf = particle_filter.ParticleFilter(self.mapJ, 100, 0.06, 0.05, 0.05, self.start_x, self.start_y)
 
 
     def sleep(self, time_in_sec):
@@ -137,20 +162,18 @@ class Run:
         print(posC)
         # self.get_cup()
 
-
-        start_x = self.s_x
-
         #self.arm.go_to(1,np.pi/4)
 
-        start_y = self.s_y
+        start_x = self.start_x
+        start_y = self.start_y
         starting_position = convert_point_to_pixels((start_x, start_y))
-        goal_position = convert_point_to_pixels((1.5, 2.5))
+        goal_position = convert_point_to_pixels((self.goal_x, self.goal_y))
         K = 5000
         delta = 10
         self.rrt.build(starting_position, K, delta)
         path = self.rrt.shortest_path(goal=self.rrt.nearest_neighbor(goal_position))
-        for i in range(1,len(path)):
-            self.map.draw_line(pos1=path[i-1].state, pos2=path[i].state, color=(255,0,0))
+        for i in range(1, len(path)):
+            self.map.draw_line(pos1=path[i-1].state, pos2=path[i].state, color=(255, 0, 0))
         # self.map.save("hello.png")
         print("map generated")
 
@@ -209,7 +232,7 @@ class Run:
 
                     # improved version 2: fuse with velocity controller
                     # output_distance = self.pidDistance.update(0, distance, curr_time)
-                    # self.create.drive_direct(int(output_theta + output_distance), int(-output_theta + output_distance))
+                    # self.create.drive_direct(int(output_theta + output_distance),int(-output_theta + output_distance))
                             
                     
             if i % fifth_size == 0:
@@ -239,12 +262,12 @@ class Run:
 
         self.virtual_create.enable_buttons()
         self.visualize()
-        #self.go_to_angle(math.radians(90))
-        #self.sleep(5)
+        # self.go_to_angle(math.radians(90))
+        # self.sleep(5)
         self.get_cup()
-        self.place_cup(2)
+        self.place_cup()
 
-        #self.arm.go_to(4, math.radians(-90))
+        # self.arm.go_to(4, math.radians(-90))
         self.time.sleep(4)
 
         while True:
@@ -264,14 +287,11 @@ class Run:
                 self.pf.measure(distance, 0)
                 self.visualize()
 
-            #posC = self.create.sim_get_position()
-
-            #print(posC)
-
-            #self.arm.go_to(4, math.radians(-90))
-            #self.arm.go_to(5, math.radians(90))
+            # posC = self.create.sim_get_position()
+            # print(posC)
+            # self.arm.go_to(4, math.radians(-90))
+            # self.arm.go_to(5, math.radians(90))
             self.time.sleep(100)
-
 
             self.time.sleep(0.01)
 
@@ -287,10 +307,10 @@ class Run:
 
     def inverse_kinematics(self, x_i, z_i):
 
-        L1 = 0.4 # estimated using V-REP (joint2 - joint4)
-        L2 = 0.39 # estimated using V-REP (joint4 - joint6)
+        L1 = self.link1
+        L2 = self.link2
         # Corrections for our coordinate system
-        z = z_i - 0.3105
+        z = z_i - self.arm_base_height
         x = -x_i
         # compute inverse kinematics
         r = math.sqrt(x*x + z*z)
@@ -317,30 +337,30 @@ class Run:
     def get_cup(self):
         print("cup [x:{},y:{},theta:{}]".format(self.odometry.x, self.odometry.y, math.degrees(self.odometry.theta)))
 
-        c_x = self.odometry.x - .1372*math.cos(self.odometry.theta) #- .04
-        c_y = self.odometry.y - .1372*math.sin(self.odometry.theta) #+ .05
+        # using trig to calculate the coordinates of the cup
+        c_x = self.odometry.x - 0.1372 * math.cos(self.odometry.theta)
+        c_y = self.odometry.y - 0.1372 * math.sin(self.odometry.theta)
 
-        # c_x = 1.5
-        # c_x = 2.75
-
-        angle = math.tan((c_x-1.6001)/(c_y-3.3999))
-        self.arm.go_to(0,-1*angle)
-        h = math.sqrt((c_x-1.6)**2+(c_y-3.4)**2)
+        angle = math.tan((c_x - self.arm_x)/(c_y - self.arm_y))
+        self.arm.go_to(0, -1 * angle)
+        h = math.sqrt((c_x - self.arm_x)**2+(c_y - self.arm_y)**2)
         print(h)
         self.time.sleep(6)
-        self.inverse_kinematics(-h+.4,.2)
+        self.inverse_kinematics(-h + self.gripper_len, self.cup_height)
         self.time.sleep(6)
+        input("press enter to continue")
         #self.inverse_kinematics(-h+.32,.17)
         self.time.sleep(6)
         self.arm.close_gripper()
         self.time.sleep(6)
+        input("press enter to continue")
 
-    def place_cup(self, shelf):
-        shelf_height = [.21,.53,.85]
-        self.inverse_kinematics(-.5,shelf_height[shelf])
+    def place_cup(self):
+        height = self.shelf_heights[self.shelf_number]
+        self.inverse_kinematics(-0.5, height)
         self.sleep(4)
-        self.arm.go_to(0,1*-math.pi/4)
+        self.arm.go_to(0, 1 * -math.pi/4)
         self.time.sleep(1)
-        self.arm.go_to(0,2*-math.pi/4)
+        self.arm.go_to(0, 2 * -math.pi/4)
         self.time.sleep(1)
-        self.arm.go_to(0,3*-math.pi/4)
+        self.arm.go_to(0, 3 * -math.pi/4)
